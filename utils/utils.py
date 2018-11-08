@@ -1,5 +1,6 @@
 from __future__ import division
 import math
+import json
 import time
 import torch
 import torch.nn as nn
@@ -7,8 +8,18 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+
+from zipfile import ZipFile, ZipExtFile
+
+def load_params(path):
+    """
+    Loads params labels at 'path'
+    """
+    if(type(path) is ZipExtFile):
+        return json.loads(p.read().decode("utf-8"))
+    else:
+        fp = open(path, "r")
+        return json.loads(fp.read())
 
 
 def load_classes(path):
