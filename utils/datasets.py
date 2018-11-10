@@ -2,6 +2,7 @@ import glob
 import random
 import os
 import numpy as np
+from pathlib import Path
 
 import torch
 
@@ -19,7 +20,7 @@ class ImageFolder(Dataset):
         self.img_shape = (img_size, img_size)
 
     def __getitem__(self, index):
-        img_path = self.files[index % len(self.files)]
+        img_path = Path(self.files[index % len(self.files)]).resolve()
         # Extract image
         img = np.array(Image.open(img_path))
         h, w, _ = img.shape
@@ -37,19 +38,25 @@ class ImageFolder(Dataset):
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
 
-        return img_path, input_img
+        return str(img_path), input_img
 
     def __len__(self):
         return len(self.files)
 
 
 class ListDataset(Dataset):
-    def __init__(self, list_path, img_size=416):
+    def __init__(self, base_path, list_path, img_size=416):
         with open(list_path, 'r') as file:
             self.img_files = file.readlines()
         self.label_files = [path.replace('images', 'labels').replace('.png', '.txt').replace('.jpg', '.txt') for path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 50
+        self.base_path = Path(base_path)
+
+    def __get_path(self, index, list):
+        raw = list[index % len(self.img_files)].rstrip()
+        full =  self.base_path.joinpath(raw).resolve()
+        return str(full)
 
     def __getitem__(self, index):
 
@@ -57,14 +64,14 @@ class ListDataset(Dataset):
         #  Image
         #---------
 
-        img_path = self.img_files[index % len(self.img_files)].rstrip()
+        img_path = self.__get_path(index, self.img_files)
         img = np.array(Image.open(img_path))
 
         # Handles images with less than three channels
         while len(img.shape) != 3:
             index += 1
-            img_path = self.img_files[index % len(self.img_files)].rstrip()
-            img = np.array(Image.open(img_path))
+            img_path = self.__get_path(index, self.img_files)
+            img = np.array(Image.open(img_path))        
 
         h, w, _ = img.shape
         dim_diff = np.abs(h - w)
@@ -86,8 +93,7 @@ class ListDataset(Dataset):
         #  Label
         #---------
 
-        label_path = self.label_files[index % len(self.img_files)].rstrip()
-
+        label_path = self.__get_path(index, self.label_files)
         labels = None
         if os.path.exists(label_path):
             labels = np.loadtxt(label_path).reshape(-1, 5)

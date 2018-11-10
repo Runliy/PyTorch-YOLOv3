@@ -9,6 +9,7 @@ import sys
 import time
 import datetime
 import argparse
+from pathlib import Path
 
 import torch
 from torch.utils.data import DataLoader
@@ -20,24 +21,39 @@ import matplotlib.patches as patches
 from matplotlib.ticker import NullLocator
 
 
-def main(options):
-    cuda = torch.cuda.is_available() and opt.use_cuda
+def main(opt):
+
+    # compute settings
+    use_cuda = opt.use_cuda
+    n_cpu = opt.n_cpu
+    # prediction settings
+    img_size = opt.img_size
+    batch_size = opt.batch_size
+    class_path = opt.class_path
+    conf_thres = opt.conf_thres
+    nms_thres = opt.nms_thres
+    # paths
+    weights_path = Path(opt.weights_path).resolve()
+    config_path = Path(opt.config_path).resolve()
+    image_folder = opt.image_folder
+
+    cuda = torch.cuda.is_available() and use_cuda
 
     os.makedirs('output', exist_ok=True)
 
     # Set up model
-    model = Darknet(opt.config_path, img_size=opt.img_size)
-    model.load_weights(opt.weights_path)
+    model = Darknet(config_path, img_size=img_size)
+    model.load_weights(weights_path)
 
     if cuda:
         model.cuda()
 
     model.eval() # Set in evaluation mode
 
-    dataloader = DataLoader(ImageFolder(opt.image_folder, img_size=opt.img_size),
-                            batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
+    dataloader = DataLoader(ImageFolder(image_folder, img_size=img_size),
+                            batch_size=batch_size, shuffle=False, num_workers=n_cpu)
 
-    classes = load_classes(opt.class_path) # Extracts class labels from file
+    classes = load_classes(class_path) # Extracts class labels from file
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
@@ -53,7 +69,7 @@ def main(options):
         # Get detections
         with torch.no_grad():
             detections = model(input_imgs)
-            detections = non_max_suppression(detections, 80, opt.conf_thres, opt.nms_thres)
+            detections = non_max_suppression(detections, 80, conf_thres, nms_thres)
 
 
         # Log progress
@@ -83,11 +99,11 @@ def main(options):
         ax.imshow(img)
 
         # The amount of padding that was added
-        pad_x = max(img.shape[0] - img.shape[1], 0) * (opt.img_size / max(img.shape))
-        pad_y = max(img.shape[1] - img.shape[0], 0) * (opt.img_size / max(img.shape))
+        pad_x = max(img.shape[0] - img.shape[1], 0) * (img_size / max(img.shape))
+        pad_y = max(img.shape[1] - img.shape[0], 0) * (img_size / max(img.shape))
         # Image height and width after padding is removed
-        unpad_h = opt.img_size - pad_y
-        unpad_w = opt.img_size - pad_x
+        unpad_h = img_size - pad_y
+        unpad_w = img_size - pad_x
 
         # Draw bounding boxes and labels of detections
         if detections is not None:
@@ -124,10 +140,10 @@ def main(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_folder', type=str, default='data/samples', help='path to dataset')
-    parser.add_argument('--config_path', type=str, default='config/yolov3.cfg', help='path to model config file')
-    parser.add_argument('--weights_path', type=str, default='weights/yolov3.weights', help='path to weights file')
-    parser.add_argument('--class_path', type=str, default='data/coco.names', help='path to class label file')
+    parser.add_argument('--image_folder', type=str, default='../data/samples', help='path to dataset')
+    parser.add_argument('--config_path', type=str, default='model/yolov3.cfg', help='path to model config file')
+    parser.add_argument('--weights_path', type=str, default='model/yolov3.weights', help='path to weights file')
+    parser.add_argument('--class_path', type=str, default='model/coco.names', help='path to class label file')
     parser.add_argument('--conf_thres', type=float, default=0.8, help='object confidence threshold')
     parser.add_argument('--nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
     parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
