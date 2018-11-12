@@ -19,7 +19,9 @@ from torchvision import transforms
 from torch.autograd import Variable
 import torch.optim as optim
 
-def main(opt):
+from azureml.core.run import Run
+
+def main(opt, run=None):
 
     # Get data configuration
     base_path = Path(opt.base_path)
@@ -37,7 +39,6 @@ def main(opt):
     checkpoint_interval = opt.checkpoint_interval
     checkpoint_dir = opt.checkpoint_dir
 
-
     cuda = torch.cuda.is_available() and use_cuda
 
     os.makedirs("output", exist_ok=True)
@@ -51,6 +52,23 @@ def main(opt):
     momentum = float(hyperparams["momentum"])
     decay = float(hyperparams["decay"])
     burn_in = int(hyperparams["burn_in"])
+
+    if run != None:
+        run.log('base_path', base_path)
+        run.log('use_cuda', use_cuda)
+        run.log('class_path', class_path)
+        run.log('model_file', model_file)
+        run.log('data_file', data_file)
+        run.log('weight_file', weight_file)
+        run.log('batch_size', batch_size)
+        run.log('n_cpu', n_cpu)
+        run.log('epochs', epochs)
+        run.log('checkpoint_interval', checkpoint_interval)
+        run.log('checkpoint_dir', checkpoint_dir)
+        run.log('learning_rate', learning_rate)
+        run.log('momentum', momentum)
+        run.log('decay', decay)
+        run.log('burn_in', burn_in)
 
     # Initiate model
     model = Darknet(model_file)
@@ -101,6 +119,18 @@ def main(opt):
                     model.losses["precision"],
                 )
             )
+            
+            if run != None:
+                if batch_i % 100 == 0:
+                    run.log('x', model.losses["x"])
+                    run.log('y', model.losses["y"])
+                    run.log('w', model.losses["w"])
+                    run.log('h', model.losses["h"])
+                    run.log('conf', model.losses["conf"])
+                    run.log('cls', model.losses["cls"])
+                    run.log('total', loss.item())
+                    run.log('recall', model.losses["recall"])
+                    run.log('precision', model.losses["precision"])
 
             model.seen += imgs.size(0)
 
@@ -123,4 +153,9 @@ if __name__ == '__main__':
     parser.add_argument("--use_cuda", type=str, default='false', help="whether to use cuda if available")
     opt = parser.parse_args()
     print(opt)
-    main(opt)
+    try:
+        run = Run.get_submitted_run()
+    except:
+        run = None
+
+    main(opt, run)

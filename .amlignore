@@ -5,3 +5,17 @@ azureml-logs
 outputs
 azureml-setup
 docs
+__pycache__
+.vscode
+assets
+checkpoints
+data
+output
+weights
+.gitignore
+control.ipynb
+eval.ipynb
+experiments.ipynb
+README.md
+config
+model/yolov3.weights
