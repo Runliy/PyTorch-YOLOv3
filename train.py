@@ -89,7 +89,6 @@ def main(opt, run=None):
         flog = log_dir.joinpath('epoch_{}_{}.txt'.format(epoch, epochs)).resolve()
         print('Epoch {}/{}'.format(epoch, epochs))
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
-            print(' --Batch {}/{}'.format(batch_i, len(dataloader)))
             imgs = Variable(imgs.type(Tensor))
             targets = Variable(targets.type(Tensor), requires_grad=False)
 
@@ -102,9 +101,10 @@ def main(opt, run=None):
             # loss
             losses = { 'x': model.losses["x"], 'y': model.losses["y"], 'w': model.losses["w"], 'h': model.losses["h"],
                         'conf': model.losses["conf"], 'cls': model.losses["cls"], 'total': loss.item(), 
-                        'recall': model.losses["recall"], 'precision': model.losses["precision"]}
+                        'recall': model.losses["recall"], 'precision': model.losses["precision"] }
 
             # output logging
+            print(fmt.format(epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses))
             log(flog, fmt, epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses)
             
             if batch_i % 100 == 0:
