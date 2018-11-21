@@ -19,3 +19,6 @@ eval.ipynb
 experiments.ipynb
 README.md
 config
+assets
+*.ipynb
+*.weights

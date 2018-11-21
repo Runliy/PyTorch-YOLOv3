@@ -142,6 +142,6 @@ def convert(img_path, img_size):
 
 if __name__ == '__main__':
     init()
-    output = run(json.dumps({'image': 'https://media.bizarrepedia.com/images/timothy-treadwell.jpg', 'confidence': .5}))
+    output = run(json.dumps({'image': 'https://media.bizarrepedia.com/images/timothy-treadwell.jpg', 'confidence': .8}))
     n = json.loads(output)
     print(json.dumps(n, indent=3))

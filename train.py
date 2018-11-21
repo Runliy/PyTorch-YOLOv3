@@ -67,8 +67,8 @@ def main(opt, run=None):
     # Initiate model
     model = Darknet(model_file)
     # preload transfer learned weights
-    model.load_weights(weight_file)
-    #model.apply(weights_init_normal)
+    #model.load_weights(weight_file)
+    model.apply(weights_init_normal)
 
     if cuda:
         model = model.cuda()
@@ -105,11 +105,10 @@ def main(opt, run=None):
                         'recall': model.losses["recall"], 'precision': model.losses["precision"] }
 
             # output logging
-            print(fmt.format(epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses))
             log(flog, fmt, epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses)
-            
-            if batch_i % 1000 == 0:
-                aml_log(run, **losses)
+            aml_log(run, **losses)
+            if batch_i % 100 == 0:
+                print(fmt.format(epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses))
 
             model.seen += imgs.size(0)
 
