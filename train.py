@@ -66,8 +66,9 @@ def main(opt, run=None):
 
     # Initiate model
     model = Darknet(model_file)
-    # model.load_weights(weight_file)
-    model.apply(weights_init_normal)
+    # preload transfer learned weights
+    model.load_weights(weight_file)
+    #model.apply(weights_init_normal)
 
     if cuda:
         model = model.cuda()
@@ -107,7 +108,7 @@ def main(opt, run=None):
             print(fmt.format(epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses))
             log(flog, fmt, epoch=epoch, epochs=epochs, batch=batch_i, batches=len(dataloader), **losses)
             
-            if batch_i % 100 == 0:
+            if batch_i % 1000 == 0:
                 aml_log(run, **losses)
 
             model.seen += imgs.size(0)

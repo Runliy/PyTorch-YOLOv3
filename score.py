@@ -48,12 +48,15 @@ def init():
     
 
 def run(raw_data):
-    global model, cuda, classes
+    global model, cuda, classes, conf_thres
 
     # keep track of time
     prev_time = time.time()
 
-    img_path = json.loads(raw_data)['image']
+    post = json.loads(raw_data)
+    img_path = post['image']
+    conf_thres = post['confidence'] if 'confidence' in post else conf_thres
+
     input_img, img_shape = convert(img_path, img_size)
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
@@ -139,6 +142,6 @@ def convert(img_path, img_size):
 
 if __name__ == '__main__':
     init()
-    output = run(json.dumps({'image': 'https://media.bizarrepedia.com/images/timothy-treadwell.jpg'}))
+    output = run(json.dumps({'image': 'https://media.bizarrepedia.com/images/timothy-treadwell.jpg', 'confidence': .5}))
     n = json.loads(output)
     print(json.dumps(n, indent=3))

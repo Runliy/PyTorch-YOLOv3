@@ -15,3 +15,4 @@ model/
 .ipynb_checkpoints/
 .vscode/
 aml_config/
+logs/
