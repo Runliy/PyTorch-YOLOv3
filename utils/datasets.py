@@ -64,8 +64,17 @@ class ListDataset(Dataset):
         #  Image
         #---------
 
-        img_path = self.__get_path(index, self.img_files)
-        img = np.array(Image.open(img_path))
+        # if we have a loading error just
+        # get the next one....
+        error = True
+        while error:
+            try:
+                img_path = self.__get_path(index, self.img_files)
+                img = np.array(Image.open(img_path))
+                error = False
+            except:
+                index += 1
+                error = True
 
         # Handles images with less than three channels
         while len(img.shape) != 3:

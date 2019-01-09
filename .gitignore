@@ -16,3 +16,4 @@ model/
 .vscode/
 aml_config/
 logs/
+*.log

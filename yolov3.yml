@@ -19,3 +19,4 @@ dependencies:
   - torchvision
   - pillow
   - matplotlib
+  - azureml-monitoring

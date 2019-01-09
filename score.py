@@ -12,16 +12,29 @@ from torch.autograd import Variable
 from skimage.transform import resize
 from utils.utils import load_classes, load_params, non_max_suppression
 
+# azureml imports
 from azureml.core.model import Model
+from azureml.monitoring import ModelDataCollector
+
+
 
 def init():
     global model, cuda, classes, img_size
     global use_cuda, conf_thres, nms_thres
+    global inputs_dc, prediction_dc
+
 
     try:
         model_path = Model.get_model_path('YOLOv3')
     except:
         model_path = 'model'
+
+    try:
+        inputs_dc = ModelDataCollector("YOLOv3Inference", identifier="inputs", feature_names=["path", "height", "width", "confidence", "time"])
+        prediction_dc = ModelDataCollector("YOLOv3Inference", identifier="predictions", feature_names=["path", "time", "sequence", "label", "confidence", "x", "y", "width", "height"])
+    except:
+        inputs_dc = None
+        prediction_dc = None
 
     config_path = os.path.join(model_path, 'yolov3.cfg')
     class_path = os.path.join(model_path,'coco.names')
@@ -45,12 +58,14 @@ def init():
 
     # Set in evaluation mode
     model.eval() 
+    print("model initialized (cuda: {}) [{}]".format(cuda, datetime.datetime.now()))
     
 
 def run(raw_data):
     global model, cuda, classes, conf_thres
 
     # keep track of time
+    cur_date = datetime.datetime.now()
     prev_time = time.time()
 
     post = json.loads(raw_data)
@@ -58,6 +73,12 @@ def run(raw_data):
     conf_thres = post['confidence'] if 'confidence' in post else conf_thres
 
     input_img, img_shape = convert(img_path, img_size)
+
+    inputs = [img_path, img_shape[0], img_shape[1], conf_thres, str(datetime.datetime.now())]
+    print('Inference: Path({}), Height({}), Width({}), Confidence({}), {}'.format(*inputs))
+    
+    if inputs_dc != None:
+        inputs_dc.collect(inputs)   
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
@@ -79,6 +100,7 @@ def run(raw_data):
 
     items = []
     if detections is not None:
+        sequence = 1
         for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
             prediction = {}
             # predictions
@@ -99,6 +121,10 @@ def run(raw_data):
             prediction['height'] = box_h.item()
             items.append(prediction)
 
+            pred = [img_path, str(cur_date), sequence, *[v for v in prediction.values()]]
+            if prediction_dc != None:
+                prediction_dc.collect(result)
+            sequence += 1
 
     # Log progress
     current_time = time.time()
@@ -109,8 +135,9 @@ def run(raw_data):
     payload['time'] = inference_time.total_seconds()
     payload['predictions'] = items
 
-    return json.dumps(payload)
+    print('Prediction({}): {}'.format(str(datetime.datetime.now()), json.dumps(payload, indent=3)))
 
+    return json.dumps(payload)
 
 def convert(img_path, img_size):
     img = np.array([0])
@@ -143,5 +170,3 @@ def convert(img_path, img_size):
 if __name__ == '__main__':
     init()
     output = run(json.dumps({'image': 'https://media.bizarrepedia.com/images/timothy-treadwell.jpg', 'confidence': .8}))
-    n = json.loads(output)
-    print(json.dumps(n, indent=3))
