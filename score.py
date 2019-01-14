@@ -21,20 +21,11 @@ from azureml.monitoring import ModelDataCollector
 def init():
     global model, cuda, classes, img_size
     global use_cuda, conf_thres, nms_thres
-    global inputs_dc, prediction_dc
-
 
     try:
         model_path = Model.get_model_path('YOLOv3')
     except:
         model_path = 'model'
-
-    try:
-        inputs_dc = ModelDataCollector("YOLOv3Inference", identifier="inputs", feature_names=["path", "height", "width", "confidence", "time"])
-        prediction_dc = ModelDataCollector("YOLOv3Inference", identifier="predictions", feature_names=["path", "time", "sequence", "label", "confidence", "x", "y", "width", "height"])
-    except:
-        inputs_dc = None
-        prediction_dc = None
 
     config_path = os.path.join(model_path, 'yolov3.cfg')
     class_path = os.path.join(model_path,'coco.names')
@@ -76,10 +67,6 @@ def run(raw_data):
 
     inputs = [img_path, img_shape[0], img_shape[1], conf_thres, str(datetime.datetime.now())]
     print('Inference: Path({}), Height({}), Width({}), Confidence({}), {}'.format(*inputs))
-    
-    if inputs_dc != None:
-        inputs_dc.collect(inputs)   
-
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     # Configure input
@@ -122,8 +109,6 @@ def run(raw_data):
             items.append(prediction)
 
             pred = [img_path, str(cur_date), sequence, *[v for v in prediction.values()]]
-            if prediction_dc != None:
-                prediction_dc.collect(result)
             sequence += 1
 
     # Log progress
@@ -137,7 +122,7 @@ def run(raw_data):
 
     print('Prediction({}): {}'.format(str(datetime.datetime.now()), json.dumps(payload, indent=3)))
 
-    return json.dumps(payload)
+    return payload
 
 def convert(img_path, img_size):
     img = np.array([0])
